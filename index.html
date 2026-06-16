@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QCM Codoping Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f6f7f9;
+      margin: 0;
+      padding: 24px;
+      color: #222;
+    }
+    .wrap {
+      max-width: 850px;
+      margin: auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 18px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+    h1 {
+      margin-top: 0;
+      font-size: 26px;
+    }
+    .desc {
+      color: #666;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+    label {
+      font-size: 14px;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 6px;
+    }
+    input {
+      width: 100%;
+      padding: 11px;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      font-size: 15px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      margin-top: 22px;
+      padding: 14px;
+      border: 0;
+      border-radius: 12px;
+      background: #222;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .result {
+      margin-top: 24px;
+      padding: 18px;
+      background: #f1f4f8;
+      border-radius: 14px;
+    }
+    .card {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 12px;
+      border: 1px solid #e0e0e0;
+      line-height: 1.7;
+    }
+    .big {
+      font-size: 24px;
+      font-weight: bold;
+      color: #0b5fff;
+      margin-top: 6px;
+    }
+    .formula {
+      font-family: "Times New Roman", serif;
+      font-size: 18px;
+      background: #fafafa;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 8px 0;
+    }
+    .note {
+      font-size: 13px;
+      color: #666;
+    }
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>QCM Co-doping Tooling Calculator</h1>
+
+    <p class="desc">
+      A/B 물질의 목표 두께, 툴링 팩터, 증착 속도를 입력하면
+      단일 QCM 센서에서 어떤 두께가 표시될 때 셔터를 닫아야 하는지 계산합니다.
+    </p>
+
+    <div class="grid">
+      <div>
+        <label>총 목표 두께 k (nm)</label>
+        <input id="k" type="number" value="20" step="0.01">
+      </div>
+
+      <div>
+        <label>A 목표 두께 kA (nm)</label>
+        <input id="kA" type="number" value="18" step="0.01">
+      </div>
+
+      <div>
+        <label>B 목표 두께 kB (nm)</label>
+        <input id="kB" type="number" value="2" step="0.01">
+      </div>
+
+      <div>
+        <label>A 툴링 팩터 X</label>
+        <input id="X" type="number" value="1.5" step="0.01">
+      </div>
+
+      <div>
+        <label>B 툴링 팩터 Y</label>
+        <input id="Y" type="number" value="0.5" step="0.01">
+      </div>
+
+      <div>
+        <label>A 증착 속도 rA (nm/s)</label>
+        <input id="rA" type="number" value="0.1" step="0.001">
+      </div>
+
+      <div>
+        <label>B 증착 속도 rB (nm/s)</label>
+        <input id="rB" type="number" value="0.0111" step="0.001">
+      </div>
+    </div>
+
+    <button onclick="calc()">계산하기</button>
+
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    function calc() {
+      const k = Number(document.getElementById("k").value);
+      const kA = Number(document.getElementById("kA").value);
+      const kB = Number(document.getElementById("kB").value);
+      const X = Number(document.getElementById("X").value);
+      const Y = Number(document.getElementById("Y").value);
+      const rA = Number(document.getElementById("rA").value);
+      const rB = Number(document.getElementById("rB").value);
+
+      if ([k, kA, kB, X, Y, rA, rB].some(v => isNaN(v) || v <= 0)) {
+        document.getElementById("result").innerHTML =
+          "<div class='card'>모든 값을 0보다 큰 숫자로 입력해주세요.</div>";
+        return;
+      }
+
+      const targetA = kA + kB * (X / Y);
+      const targetB = kA * (Y / X) + kB;
+
+      const ratioA = kA / k * 100;
+      const ratioB = kB / k * 100;
+
+      const timeA = kA / rA;
+      const timeB = kB / rB;
+
+      const requiredRB = rA * (kB / kA);
+      const requiredRA = rB * (kA / kB);
+
+      document.getElementById("result").innerHTML = `
+        <div class="card">
+          <b>목표 조성</b><br>
+          k = k<sub>A</sub> + k<sub>B</sub><br>
+          ${k.toFixed(3)} nm = ${kA.toFixed(3)} nm + ${kB.toFixed(3)} nm<br><br>
+          A 비율: ${ratioA.toFixed(2)}%<br>
+          B 비율: ${ratioB.toFixed(2)}%
+        </div>
+
+        <div class="card">
+          <b>1. A 물질 툴링 팩터 X 기준</b>
+
+          <div class="formula">
+            Target<sub>A-monitor</sub>
+            = k<sub>A</sub> + k<sub>B</sub> × X / Y
+          </div>
+
+          <div class="formula">
+            = ${kA.toFixed(3)}
+            + ${kB.toFixed(3)} × ${X.toFixed(3)} / ${Y.toFixed(3)}
+          </div>
+
+          <div class="big">${targetA.toFixed(3)} nm</div>
+
+          <span class="note">
+            QCM에 A 물질 툴링 팩터를 입력했다면,
+            모니터가 ${targetA.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
+          </span>
+        </div>
+
+        <div class="card">
+          <b>2. B 물질 툴링 팩터 Y 기준</b>
+
+          <div class="formula">
+            Target<sub>B-monitor</sub>
+            = k<sub>A</sub> × Y / X + k<sub>B</sub>
+          </div>
+
+          <div class="formula">
+            = ${kA.toFixed(3)}
+            × ${Y.toFixed(3)} / ${X.toFixed(3)}
+            + ${kB.toFixed(3)}
+          </div>
+
+          <div class="big">${targetB.toFixed(3)} nm</div>
+
+          <span class="note">
+            QCM에 B 물질 툴링 팩터를 입력했다면,
+            모니터가 ${targetB.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
+          </span>
+        </div>
+
+        <div class="card">
+          <b>3. 증착 속도 체크</b>
+
+          <div class="formula">
+            t<sub>A</sub> = k<sub>A</sub> / r<sub>A</sub>
+            = ${kA.toFixed(3)} / ${rA.toFixed(4)}
+            = ${timeA.toFixed(2)} s
+          </div>
+
+          <div class="formula">
+            t<sub>B</sub> = k<sub>B</sub> / r<sub>B</sub>
+            = ${kB.toFixed(3)} / ${rB.toFixed(4)}
+            = ${timeB.toFixed(2)} s
+          </div>
+
+          A 속도 ${rA.toFixed(4)} nm/s 유지 시 필요한 B 속도:
+          <b>${requiredRB.toFixed(4)} nm/s</b><br>
+
+          B 속도 ${rB.toFixed(4)} nm/s 유지 시 필요한 A 속도:
+          <b>${requiredRA.toFixed(4)} nm/s</b><br><br>
+
+          <span class="note">
+            코도핑에서는 A와 B가 같은 시간 동안 증착되므로,
+            tA와 tB가 비슷해야 목표 조성에 가깝습니다.
+          </span>
+        </div>
+      `;
+    }
+
+    calc();
+  </script>
+</body>
+</html>
