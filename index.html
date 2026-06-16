@@ -1,9 +1,9 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>QCM Co-doping Tooling Calculator</title>
+  <title>QCM Co-deposition Calculator</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,9 +14,9 @@
     }
 
     .wrap {
-      max-width: 860px;
+      max-width: 900px;
       margin: auto;
-      background: #fff;
+      background: white;
       padding: 28px;
       border-radius: 18px;
       box-shadow: 0 8px 24px rgba(0,0,0,0.08);
@@ -29,8 +29,8 @@
 
     .desc {
       color: #666;
-      line-height: 1.6;
       font-size: 14px;
+      line-height: 1.6;
     }
 
     .grid {
@@ -115,48 +115,38 @@
 
 <body>
   <div class="wrap">
-    <h1>QCM Co-doping Tooling Calculator</h1>
+    <h1>QCM Co-deposition Calculator</h1>
 
     <p class="desc">
-      A/B 물질의 목표 두께, 툴링 팩터, 증착 속도를 입력하면
-      단일 QCM 센서에서 어떤 두께가 표시될 때 셔터를 닫아야 하는지 계산합니다.
-      두께는 nm, 증착 속도는 Å/s 기준입니다.
+      총 목표 두께와 4개의 QCM rate를 입력하면,
+      A 툴링 기준 또는 B 툴링 기준에서 각각 몇 nm까지 쌓아야 하는지 계산합니다.
+      두께 단위는 nm, rate 단위는 Å/s입니다.
     </p>
 
     <div class="grid">
       <div>
-        <label>총 목표 두께 k (nm)</label>
+        <label>총 목표 실제 두께 k (nm)</label>
         <input id="k" type="number" value="20" step="0.01">
       </div>
 
       <div>
-        <label>A 목표 두께 kA (nm)</label>
-        <input id="kA" type="number" value="18" step="0.01">
+        <label>A-tool 기준에서 보이는 A rate, rAA (Å/s)</label>
+        <input id="rAA" type="number" value="1.0" step="0.001">
       </div>
 
       <div>
-        <label>B 목표 두께 kB (nm)</label>
-        <input id="kB" type="number" value="2" step="0.01">
+        <label>A-tool 기준에서 보이는 B rate, rAB (Å/s)</label>
+        <input id="rAB" type="number" value="3.0" step="0.001">
       </div>
 
       <div>
-        <label>A 툴링 팩터 X</label>
-        <input id="X" type="number" value="1.5" step="0.01">
+        <label>B-tool 기준에서 보이는 A rate, rBA (Å/s)</label>
+        <input id="rBA" type="number" value="0.333" step="0.001">
       </div>
 
       <div>
-        <label>B 툴링 팩터 Y</label>
-        <input id="Y" type="number" value="0.5" step="0.01">
-      </div>
-
-      <div>
-        <label>A 증착 속도 rA (Å/s)</label>
-        <input id="rA" type="number" value="1.0" step="0.01">
-      </div>
-
-      <div>
-        <label>B 증착 속도 rB (Å/s)</label>
-        <input id="rB" type="number" value="0.111" step="0.01">
+        <label>B-tool 기준에서 보이는 B rate, rBB (Å/s)</label>
+        <input id="rBB" type="number" value="1.0" step="0.001">
       </div>
     </div>
 
@@ -168,130 +158,120 @@
   <script>
     function calc() {
       const k = Number(document.getElementById("k").value);
-      const kA = Number(document.getElementById("kA").value);
-      const kB = Number(document.getElementById("kB").value);
-      const X = Number(document.getElementById("X").value);
-      const Y = Number(document.getElementById("Y").value);
-      const rA = Number(document.getElementById("rA").value);
-      const rB = Number(document.getElementById("rB").value);
+      const rAA = Number(document.getElementById("rAA").value);
+      const rAB = Number(document.getElementById("rAB").value);
+      const rBA = Number(document.getElementById("rBA").value);
+      const rBB = Number(document.getElementById("rBB").value);
 
-      if ([k, kA, kB, X, Y, rA, rB].some(v => isNaN(v) || v <= 0)) {
+      if ([k, rAA, rAB, rBA, rBB].some(v => isNaN(v) || v <= 0)) {
         document.getElementById("result").innerHTML =
           "<div class='card'>모든 값을 0보다 큰 숫자로 입력해주세요.</div>";
         return;
       }
 
-      const total = kA + kB;
+      const actualRateTotal = rAA + rBB;
 
-      const targetA = kA + kB * (X / Y);
-      const targetB = kA * (Y / X) + kB;
+      const kA = k * rAA / actualRateTotal;
+      const kB = k * rBB / actualRateTotal;
 
-      const ratioA = kA / total * 100;
-      const ratioB = kB / total * 100;
+      const ratioA = kA / k * 100;
+      const ratioB = kB / k * 100;
 
-      const timeA = (10 * kA) / rA;
-      const timeB = (10 * kB) / rB;
+      const depositionTime = (10 * k) / actualRateTotal;
 
-      const requiredRB = rA * (kB / kA);
-      const requiredRA = rB * (kA / kB);
-
-      const timeDiff = Math.abs(timeA - timeB);
+      const targetAtool = k * (rAA + rAB) / actualRateTotal;
+      const targetBtool = k * (rBA + rBB) / actualRateTotal;
 
       document.getElementById("result").innerHTML = `
         <div class="card">
-          <b>목표 조성</b><br>
-          k = k<sub>A</sub> + k<sub>B</sub><br>
-          ${total.toFixed(3)} nm = ${kA.toFixed(3)} nm + ${kB.toFixed(3)} nm<br><br>
-
-          A 비율: ${ratioA.toFixed(2)}%<br>
-          B 비율: ${ratioB.toFixed(2)}%<br><br>
-
-          입력한 총 목표 두께 k: ${k.toFixed(3)} nm
+          <b>입력 rate 정의</b><br>
+          r<sub>AA</sub>: A-tool 기준에서 보이는 A 물질 rate = ${rAA.toFixed(4)} Å/s<br>
+          r<sub>AB</sub>: A-tool 기준에서 보이는 B 물질 rate = ${rAB.toFixed(4)} Å/s<br>
+          r<sub>BA</sub>: B-tool 기준에서 보이는 A 물질 rate = ${rBA.toFixed(4)} Å/s<br>
+          r<sub>BB</sub>: B-tool 기준에서 보이는 B 물질 rate = ${rBB.toFixed(4)} Å/s
         </div>
 
         <div class="card">
-          <b>1. A 물질 툴링 팩터 X 기준</b>
+          <b>실제 기판 기준 조성</b>
 
           <div class="formula">
-            Target<sub>A-monitor</sub>
-            = k<sub>A</sub> + k<sub>B</sub> × X / Y
+            k<sub>A</sub> = k × r<sub>AA</sub> / (r<sub>AA</sub> + r<sub>BB</sub>)
           </div>
 
           <div class="formula">
-            = ${kA.toFixed(3)}
-            + ${kB.toFixed(3)} × ${X.toFixed(3)} / ${Y.toFixed(3)}
+            = ${k.toFixed(3)} × ${rAA.toFixed(4)} / (${rAA.toFixed(4)} + ${rBB.toFixed(4)})
+            = ${kA.toFixed(3)} nm
           </div>
 
           <div class="formula">
-            = ${targetA.toFixed(3)} nm
+            k<sub>B</sub> = k × r<sub>BB</sub> / (r<sub>AA</sub> + r<sub>BB</sub>)
           </div>
 
-          <div class="big">${targetA.toFixed(3)} nm</div>
+          <div class="formula">
+            = ${k.toFixed(3)} × ${rBB.toFixed(4)} / (${rAA.toFixed(4)} + ${rBB.toFixed(4)})
+            = ${kB.toFixed(3)} nm
+          </div>
+
+          A 물질 비율: <b>${ratioA.toFixed(2)}%</b><br>
+          B 물질 비율: <b>${ratioB.toFixed(2)}%</b>
+        </div>
+
+        <div class="card">
+          <b>1. A-tool 기준으로 QCM을 설정한 경우</b>
+
+          <div class="formula">
+            Target<sub>A-tool</sub>
+            = k × (r<sub>AA</sub> + r<sub>AB</sub>) / (r<sub>AA</sub> + r<sub>BB</sub>)
+          </div>
+
+          <div class="formula">
+            = ${k.toFixed(3)} × (${rAA.toFixed(4)} + ${rAB.toFixed(4)})
+            / (${rAA.toFixed(4)} + ${rBB.toFixed(4)})
+          </div>
+
+          <div class="big">${targetAtool.toFixed(3)} nm</div>
 
           <span class="note">
-            QCM에 A 물질 툴링 팩터 X를 입력했다면,
-            모니터가 ${targetA.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
+            QCM을 A 물질 툴링값으로 설정했다면,
+            모니터가 ${targetAtool.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
           </span>
         </div>
 
         <div class="card">
-          <b>2. B 물질 툴링 팩터 Y 기준</b>
+          <b>2. B-tool 기준으로 QCM을 설정한 경우</b>
 
           <div class="formula">
-            Target<sub>B-monitor</sub>
-            = k<sub>A</sub> × Y / X + k<sub>B</sub>
+            Target<sub>B-tool</sub>
+            = k × (r<sub>BA</sub> + r<sub>BB</sub>) / (r<sub>AA</sub> + r<sub>BB</sub>)
           </div>
 
           <div class="formula">
-            = ${kA.toFixed(3)}
-            × ${Y.toFixed(3)} / ${X.toFixed(3)}
-            + ${kB.toFixed(3)}
+            = ${k.toFixed(3)} × (${rBA.toFixed(4)} + ${rBB.toFixed(4)})
+            / (${rAA.toFixed(4)} + ${rBB.toFixed(4)})
           </div>
 
-          <div class="formula">
-            = ${targetB.toFixed(3)} nm
-          </div>
-
-          <div class="big">${targetB.toFixed(3)} nm</div>
+          <div class="big">${targetBtool.toFixed(3)} nm</div>
 
           <span class="note">
-            QCM에 B 물질 툴링 팩터 Y를 입력했다면,
-            모니터가 ${targetB.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
+            QCM을 B 물질 툴링값으로 설정했다면,
+            모니터가 ${targetBtool.toFixed(3)} nm를 표시할 때 셔터를 닫으면 됩니다.
           </span>
         </div>
 
         <div class="card">
-          <b>3. 증착 속도 체크</b>
+          <b>증착 시간</b>
 
           <div class="formula">
-            1 nm = 10 Å
+            t = 10k / (r<sub>AA</sub> + r<sub>BB</sub>)
           </div>
 
           <div class="formula">
-            t<sub>A</sub> = 10 × k<sub>A</sub> / r<sub>A</sub>
-            = 10 × ${kA.toFixed(3)} / ${rA.toFixed(4)}
-            = ${timeA.toFixed(2)} s
+            = 10 × ${k.toFixed(3)} / (${rAA.toFixed(4)} + ${rBB.toFixed(4)})
+            = ${depositionTime.toFixed(2)} s
           </div>
-
-          <div class="formula">
-            t<sub>B</sub> = 10 × k<sub>B</sub> / r<sub>B</sub>
-            = 10 × ${kB.toFixed(3)} / ${rB.toFixed(4)}
-            = ${timeB.toFixed(2)} s
-          </div>
-
-          현재 A 증착 시간: <b>${timeA.toFixed(2)} s</b><br>
-          현재 B 증착 시간: <b>${timeB.toFixed(2)} s</b><br>
-          시간 차이: <b>${timeDiff.toFixed(2)} s</b><br><br>
-
-          A 속도 ${rA.toFixed(4)} Å/s 유지 시 필요한 B 속도:
-          <b>${requiredRB.toFixed(4)} Å/s</b><br>
-
-          B 속도 ${rB.toFixed(4)} Å/s 유지 시 필요한 A 속도:
-          <b>${requiredRA.toFixed(4)} Å/s</b><br><br>
 
           <span class="note">
-            코도핑에서는 A와 B가 같은 시간 동안 증착되므로,
-            t<sub>A</sub>와 t<sub>B</sub>가 비슷해야 목표 조성에 가깝습니다.
+            실제 두께 k는 nm이고 rate는 Å/s이므로, 1 nm = 10 Å 변환을 적용했습니다.
           </span>
         </div>
       `;
