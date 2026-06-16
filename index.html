@@ -14,7 +14,7 @@
     }
 
     .wrap {
-      max-width: 940px;
+      max-width: 960px;
       margin: auto;
       background: white;
       padding: 28px;
@@ -25,6 +25,13 @@
     h1 {
       margin-top: 0;
       font-size: 26px;
+    }
+
+    h2 {
+      margin-top: 34px;
+      font-size: 22px;
+      border-top: 1px solid #ddd;
+      padding-top: 24px;
     }
 
     .desc {
@@ -54,7 +61,7 @@
       margin-bottom: 6px;
     }
 
-    input {
+    input, select {
       width: 100%;
       padding: 11px;
       border: 1px solid #ccc;
@@ -179,15 +186,56 @@
       </div>
     </div>
 
-    <button onclick="calc()">계산하기</button>
+    <button onclick="calcMain()">두께 계산하기</button>
 
     <div class="result" id="result"></div>
+
+    <h2>원하는 조성비로 rate 계산</h2>
+
+    <p class="desc">
+      예를 들어 5:1 조성으로 쌓고 싶을 때, 한쪽 rate만 입력하면
+      필요한 다른 한쪽 rate를 계산합니다.
+    </p>
+
+    <div class="grid">
+      <div>
+        <label>A 목표 비율</label>
+        <input id="ratioA" type="number" value="5" step="0.01">
+      </div>
+
+      <div>
+        <label>B 목표 비율</label>
+        <input id="ratioB" type="number" value="1" step="0.01">
+      </div>
+
+      <div>
+        <label>기준으로 입력할 물질</label>
+        <select id="baseMaterial">
+          <option value="A">A 물질 rate를 입력</option>
+          <option value="B">B 물질 rate를 입력</option>
+        </select>
+      </div>
+
+      <div>
+        <label>입력한 rate (Å/s)</label>
+        <input id="baseRate" type="number" value="1.0" step="0.001">
+      </div>
+    </div>
+
+    <button onclick="calcRatio()">필요 rate 계산하기</button>
+
+    <div class="result" id="ratioResult"></div>
   </div>
 
   <script>
-    function calc() {
+    function getNames() {
       const nameA = document.getElementById("nameA").value.trim() || "A 물질";
       const nameB = document.getElementById("nameB").value.trim() || "B 물질";
+      return { nameA, nameB };
+    }
+
+    function calcMain() {
+      const { nameA, nameB } = getNames();
 
       const k = Number(document.getElementById("k").value);
       const rAA = Number(document.getElementById("rAA").value);
@@ -321,7 +369,93 @@
       `;
     }
 
-    calc();
+    function calcRatio() {
+      const { nameA, nameB } = getNames();
+
+      const ratioA = Number(document.getElementById("ratioA").value);
+      const ratioB = Number(document.getElementById("ratioB").value);
+      const baseMaterial = document.getElementById("baseMaterial").value;
+      const baseRate = Number(document.getElementById("baseRate").value);
+
+      if ([ratioA, ratioB, baseRate].some(v => isNaN(v) || v <= 0)) {
+        document.getElementById("ratioResult").innerHTML =
+          "<div class='card'>비율과 rate를 모두 0보다 크게 입력해주세요.</div>";
+        return;
+      }
+
+      let rateA, rateB;
+
+      if (baseMaterial === "A") {
+        rateA = baseRate;
+        rateB = baseRate * ratioB / ratioA;
+      } else {
+        rateB = baseRate;
+        rateA = baseRate * ratioA / ratioB;
+      }
+
+      const percentA = ratioA / (ratioA + ratioB) * 100;
+      const percentB = ratioB / (ratioA + ratioB) * 100;
+
+      document.getElementById("ratioResult").innerHTML = `
+        <div class="card">
+          <b>목표 조성비</b><br>
+          <span class="material-name">${nameA}</span> :
+          <span class="material-name">${nameB}</span>
+          = ${ratioA} : ${ratioB}<br><br>
+
+          ${nameA} 비율: <b>${percentA.toFixed(2)}%</b><br>
+          ${nameB} 비율: <b>${percentB.toFixed(2)}%</b>
+        </div>
+
+        <div class="card">
+          <b>필요 rate 계산</b>
+
+          <div class="formula">
+            r<sub>${nameA}</sub> : r<sub>${nameB}</sub>
+            = ${ratioA} : ${ratioB}
+          </div>
+
+          ${
+            baseMaterial === "A"
+              ? `
+                <div class="formula">
+                  r<sub>${nameB}</sub>
+                  = r<sub>${nameA}</sub> × ${ratioB} / ${ratioA}
+                </div>
+
+                <div class="formula">
+                  = ${baseRate.toFixed(4)} × ${ratioB} / ${ratioA}
+                  = ${rateB.toFixed(4)} Å/s
+                </div>
+              `
+              : `
+                <div class="formula">
+                  r<sub>${nameA}</sub>
+                  = r<sub>${nameB}</sub> × ${ratioA} / ${ratioB}
+                </div>
+
+                <div class="formula">
+                  = ${baseRate.toFixed(4)} × ${ratioA} / ${ratioB}
+                  = ${rateA.toFixed(4)} Å/s
+                </div>
+              `
+          }
+
+          <div class="big">
+            ${nameA} rate = ${rateA.toFixed(4)} Å/s<br>
+            ${nameB} rate = ${rateB.toFixed(4)} Å/s
+          </div>
+
+          <span class="note">
+            이 rate는 실제 기판 기준 조성비를 맞추기 위한 값입니다.
+            장비 화면에서는 선택한 tooling 기준에 따라 표시 rate가 달라질 수 있습니다.
+          </span>
+        </div>
+      `;
+    }
+
+    calcMain();
+    calcRatio();
   </script>
 </body>
 </html>
